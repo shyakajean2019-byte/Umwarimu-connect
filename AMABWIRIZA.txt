@@ -1,0 +1,7 @@
+MWARIMU CONNECT FRONTEND
+
+1. Kanda kuri ZIP uhitemo Download.
+2. Jya muri Files/My Files > Downloads.
+3. Kanda FRONTEND_PHONE_FINAL.zip, uhitemo Extract/Unzip.
+4. Uzabona index.html, package.json, vite.config.js, vercel.json na folder src.
+5. Ntushyire .env.local muri GitHub.
