@@ -1,0 +1,1 @@
+Shyira App.jsx na styles.css muri GitHub repository yawe imbere muri folder src, usimbuze izisanzwe. Commit message: Add teacher profile and verification upload.
