@@ -1,97 +1,33 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "./supabase";
 
-const roleLabels = {
-  teacher: "Umwarimu ushaka permutation",
-  job_seeker: "Umwarimu ushaka akazi",
-  school: "Ikigo cy'amashuri",
-};
+const roleLabels = { teacher:"Umwarimu ushaka permutation", job_seeker:"Umwarimu ushaka akazi", school:"Ikigo cy'amashuri", admin:"Administrator" };
 const districts = ["Bugesera","Burera","Gakenke","Gasabo","Gatsibo","Gicumbi","Gisagara","Huye","Kamonyi","Karongi","Kayonza","Kicukiro","Kirehe","Muhanga","Musanze","Ngoma","Ngororero","Nyabihu","Nyagatare","Nyamagabe","Nyamasheke","Nyanza","Nyarugenge","Nyaruguru","Rubavu","Ruhango","Rulindo","Rusizi","Rutsiro","Rwamagana"];
 const subjects = ["Mathematics","English","Ikinyarwanda","French","Biology","Chemistry","Physics","Geography","History","ICT","Other"];
 
-export default function App() {
-  const [session, setSession] = useState(null);
-  const [profile, setProfile] = useState(null);
-  const [mode, setMode] = useState("login");
-  const [open, setOpen] = useState(false);
-  const [showProfile, setShowProfile] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [notice, setNotice] = useState("");
-  const [error, setError] = useState("");
-  const [authForm, setAuthForm] = useState({ full_name: "", email: "", password: "", role: "teacher" });
-  const [profileForm, setProfileForm] = useState({ phone:"", district:"", sector:"", school_name:"", subject:"", teaching_level:"" });
-  const [registrationNumber, setRegistrationNumber] = useState("");
-  const [documentFile, setDocumentFile] = useState(null);
+export default function App(){
+ const[session,setSession]=useState(null),[profile,setProfile]=useState(null),[loading,setLoading]=useState(true),[message,setMessage]=useState(""),[error,setError]=useState("");
+ const[authOpen,setAuthOpen]=useState(false),[authMode,setAuthMode]=useState("login"),[profileOpen,setProfileOpen]=useState(false);
+ const[auth,setAuth]=useState({full_name:"",email:"",password:"",role:"teacher"});
+ const[form,setForm]=useState({phone:"",district:"",sector:"",school_name:"",subject:"",teaching_level:""});
+ const[registrationNumber,setRegistrationNumber]=useState(""),[documentFile,setDocumentFile]=useState(null);
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => { setSession(data.session || null); setLoading(false); });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, next) => setSession(next || null));
-    return () => subscription.unsubscribe();
-  }, []);
+ useEffect(()=>{supabase.auth.getSession().then(({data})=>{setSession(data.session||null);setLoading(false)});const{data:{subscription}}=supabase.auth.onAuthStateChange((_e,s)=>setSession(s||null));return()=>subscription.unsubscribe()},[]);
+ useEffect(()=>{if(!session?.user){setProfile(null);return}loadProfile(session.user.id)},[session]);
 
-  useEffect(() => { if (!session?.user) { setProfile(null); return; } loadProfile(session.user.id); }, [session]);
-
-  async function loadProfile(userId) {
-    const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).single();
-    if (error) setError(error.message); else {
-      setProfile(data);
-      setProfileForm({ phone:data.phone||"", district:data.district||"", sector:data.sector||"", school_name:data.school_name||"", subject:data.subject||"", teaching_level:data.teaching_level||"" });
-    }
-  }
-
-  const authChange = e => setAuthForm({ ...authForm, [e.target.name]: e.target.value });
-  const profileChange = e => setProfileForm({ ...profileForm, [e.target.name]: e.target.value });
-
-  async function submitAuth(e) {
-    e.preventDefault(); setLoading(true); setError(""); setNotice("");
-    try {
-      if (mode === "register") {
-        const { data, error } = await supabase.auth.signUp({ email:authForm.email.trim(), password:authForm.password, options:{ emailRedirectTo:window.location.origin, data:{ full_name:authForm.full_name.trim(), role:authForm.role } } });
-        if (error) throw error;
-        if (data.session) { setOpen(false); setNotice("Konti yakozwe neza."); } else setNotice("Konti yakozwe. Reba email yawe wemeze konti.");
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email:authForm.email.trim(), password:authForm.password });
-        if (error) throw error;
-        setOpen(false); setNotice("Winjiye muri konti neza.");
-      }
-    } catch (e) { setError(e.message || "Habaye ikibazo."); } finally { setLoading(false); }
-  }
-
-  async function saveProfile(e) {
-    e.preventDefault(); setLoading(true); setError(""); setNotice("");
-    try {
-      const userId = session.user.id;
-      const { error: updateError } = await supabase.from("profiles").update(profileForm).eq("id", userId);
-      if (updateError) throw updateError;
-
-      let documentPath = null;
-      if (documentFile) {
-        const ext = documentFile.name.split(".").pop().toLowerCase();
-        documentPath = `${userId}/teacher-proof-${Date.now()}.${ext}`;
-        const { error: uploadError } = await supabase.storage.from("verification-documents").upload(documentPath, documentFile, { upsert:false });
-        if (uploadError) throw uploadError;
-      }
-
-      if (registrationNumber || documentPath) {
-        const { error: verificationError } = await supabase.from("teacher_verifications").insert({ teacher_id:userId, registration_number:registrationNumber || null, document_path:documentPath, status:"pending" });
-        if (verificationError && !verificationError.message.toLowerCase().includes("duplicate")) throw verificationError;
-      }
-
-      await loadProfile(userId);
-      setShowProfile(false); setNotice("Umwirondoro wabitswe. Ubu utegereje kugenzurwa na Admin.");
-    } catch (e) { setError(e.message || "Umwirondoro ntiwabitswe."); } finally { setLoading(false); }
-  }
-
-  async function logout() { await supabase.auth.signOut(); setNotice("Wasohotse muri konti."); }
-  if (loading && !session) return <div className="loading">Mwarimu Connect irimo gufunguka...</div>;
-
-  return <div>
-    <header><div className="brand"><span>↔</span>Mwarimu Connect</div><nav><a href="#home">Ahabanza</a><a href="#services">Serivisi</a></nav>{session?<button className="outline" onClick={logout}>Sohoka</button>:<button className="primary" onClick={()=>{setMode("login");setOpen(true)}}>Injira</button>}</header>
-    {notice&&<div className="notice ok">✓ {notice}</div>}{error&&<div className="notice bad">⚠ {error}</div>}
-    {!session ? <main><section className="hero" id="home"><div><small>Urubuga rw'abarimu bo mu Rwanda</small><h1>Permutation, akazi n'amahirwe y'abarimu hamwe.</h1><p>Huza n'abarimu bashaka guhana aho bakorera, ushake akazi ko kwigisha cyangwa ubone umwarimu ukenewe n'ikigo.</p><div className="actions"><button className="primary" onClick={()=>{setMode("register");setOpen(true)}}>Fungura konti →</button><button className="outline" onClick={()=>{setMode("login");setOpen(true)}}>Injira</button></div></div><div className="art">👩🏾‍🏫 <b>↔</b> 👨🏾‍🏫</div></section><section className="services" id="services"><article><h3>⇄ Permutation</h3><p>Shaka umwarimu ufite icyifuzo gihuye n'icyawe.</p></article><article><h3>💼 Akazi</h3><p>Reba imyanya y'akazi yo kwigisha kandi uyisabe.</p></article><article><h3>🏫 Ibigo</h3><p>Ibigo bitangaze vacancies kandi bicunge applications.</p></article></section></main> :
-      <main className="dashboard"><section className="welcome"><div><small>Murakaza neza</small><h1>{profile?.full_name || session.user.email}</h1><p>{roleLabels[profile?.role] || profile?.role || "Umukoresha"}</p></div><span className={`badge ${profile?.verification_status==="verified"?"verified":"pending"}`}>{profile?.verification_status==="verified"?"✓ Konti yemejwe":"Iri gutegereza kwemezwa"}</span></section><section className="metrics"><article><b>0</b><span>Ibyifuzo</span></article><article><b>0</b><span>Matches</span></article><article><b>0</b><span>Ubutumwa</span></article></section><section className="dashboardGrid"><article><h2>Umwirondoro</h2><p><b>Telefone:</b> {profile?.phone||"Ntuzuye"}</p><p><b>Akarere:</b> {profile?.district||"Ntuzuye"}</p><p><b>Ikigo:</b> {profile?.school_name||"Ntuzuye"}</p><p><b>Isomo:</b> {profile?.subject||"Ntuzuye"}</p><p><b>Urwego:</b> {profile?.teaching_level||"Ntuzuye"}</p><button className="primary" onClick={()=>setShowProfile(true)}>Uzuza / Hindura umwirondoro</button></article><article><h2>Kwemeza konti</h2><p>Kohereza teacher registration number cyangwa icyemezo kimwe cy'akazi bituma Admin abasha kugenzura konti.</p><p className="hint">Accepted: PDF, JPG cyangwa PNG. Ntarengwa 5 MB.</p></article></section></main>}
-    <footer>© 2026 Mwarimu Connect</footer>
-    {open&&<div className="overlay"><form className="modal" onSubmit={submitAuth}><button type="button" className="close" onClick={()=>setOpen(false)}>✕</button><h2>{mode==="register"?"Fungura konti":"Injira muri konti"}</h2>{mode==="register"&&<><label>Amazina yose<input name="full_name" value={authForm.full_name} onChange={authChange} required/></label><label>Ubwoko bwa konti<select name="role" value={authForm.role} onChange={authChange}>{Object.entries(roleLabels).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></label></>}<label>Email<input name="email" type="email" value={authForm.email} onChange={authChange} required/></label><label>Ijambo ry'ibanga<input name="password" type="password" minLength="8" value={authForm.password} onChange={authChange} required/></label><button className="primary full" disabled={loading}>{loading?"Tegereza...":mode==="register"?"Kora konti":"Injira"}</button><p className="switch">{mode==="register"?"Usanzwe ufite konti?":"Nta konti ufite?"} <button type="button" className="link" onClick={()=>setMode(mode==="register"?"login":"register")}>{mode==="register"?"Injira":"Fungura konti"}</button></p></form></div>}
-    {showProfile&&<div className="overlay"><form className="modal wide" onSubmit={saveProfile}><button type="button" className="close" onClick={()=>setShowProfile(false)}>✕</button><h2>Uzuza umwirondoro</h2><div className="formGrid"><label>Nimero ya telefone<input name="phone" value={profileForm.phone} onChange={profileChange} placeholder="078..." required/></label><label>Akarere<select name="district" value={profileForm.district} onChange={profileChange} required><option value="">Hitamo</option>{districts.map(x=><option key={x}>{x}</option>)}</select></label><label>Umurenge<input name="sector" value={profileForm.sector} onChange={profileChange} required/></label><label>Ikigo ukoreramo<input name="school_name" value={profileForm.school_name} onChange={profileChange} required/></label><label>Isomo<select name="subject" value={profileForm.subject} onChange={profileChange} required><option value="">Hitamo</option>{subjects.map(x=><option key={x}>{x}</option>)}</select></label><label>Urwego<select name="teaching_level" value={profileForm.teaching_level} onChange={profileChange} required><option value="">Hitamo</option>{["Nursery","Primary","Secondary","TVET"].map(x=><option key={x}>{x}</option>)}</select></label><label>Teacher registration number<input value={registrationNumber} onChange={e=>setRegistrationNumber(e.target.value)}/></label><label>Icyemezo cy'akazi<input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={e=>setDocumentFile(e.target.files?.[0]||null)}/></label></div><button className="primary full" disabled={loading}>{loading?"Birimo kubikwa...":"Bika kandi wohereze"}</button></form></div>}
-  </div>;
+ async function loadProfile(id){const{data,error}=await supabase.from("profiles").select("*").eq("id",id).single();if(error)setError(error.message);else{setProfile(data);setForm({phone:data.phone||"",district:data.district||"",sector:data.sector||"",school_name:data.school_name||"",subject:data.subject||"",teaching_level:data.teaching_level||""})}}
+ async function submitAuth(e){e.preventDefault();setLoading(true);setError("");try{if(authMode==="register"){const{data,error}=await supabase.auth.signUp({email:auth.email.trim(),password:auth.password,options:{emailRedirectTo:window.location.origin,data:{full_name:auth.full_name.trim(),role:auth.role}}});if(error)throw error;setMessage(data.session?"Konti yakozwe neza.":"Konti yakozwe. Reba email yawe wemeze konti.")}else{const{error}=await supabase.auth.signInWithPassword({email:auth.email.trim(),password:auth.password});if(error)throw error;setMessage("Winjiye muri konti neza.");setAuthOpen(false)}}catch(e){setError(e.message)}finally{setLoading(false)}}
+ async function saveProfile(e){e.preventDefault();setLoading(true);setError("");try{const id=session.user.id;const{error:u}=await supabase.from("profiles").update(form).eq("id",id);if(u)throw u;let path=null;if(documentFile){const ext=documentFile.name.split(".").pop().toLowerCase();path=`${id}/teacher-proof-${Date.now()}.${ext}`;const{error:x}=await supabase.storage.from("verification-documents").upload(path,documentFile);if(x)throw x}if(registrationNumber||path){const{error:v}=await supabase.from("teacher_verifications").upsert({teacher_id:id,registration_number:registrationNumber||null,document_path:path,status:"pending"},{onConflict:"teacher_id"});if(v)throw v}await loadProfile(id);setProfileOpen(false);setMessage("Umwirondoro n'icyifuzo cyo kwemezwa byabitswe.")}catch(e){setError(e.message)}finally{setLoading(false)}}
+ async function logout(){await supabase.auth.signOut();setMessage("Wasohotse muri konti.")}
+ if(loading&&!session)return <div className="loading">Mwarimu Connect irimo gufunguka...</div>;
+ return <div><header><div className="brand"><span>↔</span>Mwarimu Connect</div><nav><a href="#home">Ahabanza</a><a href="#services">Serivisi</a></nav>{session?<button className="outline" onClick={logout}>Sohoka</button>:<button className="primary" onClick={()=>{setAuthMode("login");setAuthOpen(true)}}>Injira</button>}</header>{message&&<div className="notice ok">✓ {message}</div>}{error&&<div className="notice bad">⚠ {error}</div>}
+ {!session?<PublicHome register={()=>{setAuthMode("register");setAuthOpen(true)}} login={()=>{setAuthMode("login");setAuthOpen(true)}}/>:profile?.role==="admin"?<AdminDashboard/>:<TeacherDashboard profile={profile} openProfile={()=>setProfileOpen(true)}/>}<footer>© 2026 Mwarimu Connect</footer>
+ {authOpen&&<AuthModal mode={authMode} setMode={setAuthMode} auth={auth} setAuth={setAuth} submit={submitAuth} close={()=>setAuthOpen(false)} loading={loading}/>} 
+ {profileOpen&&<ProfileModal form={form} setForm={setForm} registrationNumber={registrationNumber} setRegistrationNumber={setRegistrationNumber} setDocumentFile={setDocumentFile} save={saveProfile} close={()=>setProfileOpen(false)} loading={loading}/>}</div>
 }
+function PublicHome({register,login}){return <main><section className="hero" id="home"><div><small>Urubuga rw'abarimu bo mu Rwanda</small><h1>Permutation, akazi n'amahirwe y'abarimu hamwe.</h1><p>Huza n'abarimu bashaka guhana aho bakorera, ushake akazi cyangwa ubone umwarimu ukenewe n'ikigo.</p><div className="actions"><button className="primary" onClick={register}>Fungura konti →</button><button className="outline" onClick={login}>Injira</button></div></div><div className="art">👩🏾‍🏫 <b>↔</b> 👨🏾‍🏫</div></section><section className="services" id="services"><article><h3>⇄ Permutation</h3><p>Shaka uwo mwahuza.</p></article><article><h3>💼 Akazi</h3><p>Reba imyanya y'akazi.</p></article><article><h3>🏫 Ibigo</h3><p>Tangaza vacancies.</p></article></section></main>}
+function TeacherDashboard({profile,openProfile}){return <main className="dashboard"><section className="welcome"><div><small>Murakaza neza</small><h1>{profile?.full_name}</h1><p>{roleLabels[profile?.role]}</p></div><span className={`badge ${profile?.verification_status==="verified"?"verified":"pending"}`}>{profile?.verification_status==="verified"?"✓ Konti yemejwe":"Iri gutegereza kwemezwa"}</span></section><section className="metrics"><article><b>0</b><span>Ibyifuzo</span></article><article><b>0</b><span>Matches</span></article><article><b>0</b><span>Ubutumwa</span></article></section><section className="dashboardGrid"><article><h2>Umwirondoro</h2><p><b>Telefone:</b> {profile?.phone||"Ntuzuye"}</p><p><b>Akarere:</b> {profile?.district||"Ntuzuye"}</p><p><b>Ikigo:</b> {profile?.school_name||"Ntuzuye"}</p><p><b>Isomo:</b> {profile?.subject||"Ntuzuye"}</p><p><b>Urwego:</b> {profile?.teaching_level||"Ntuzuye"}</p><button className="primary" onClick={openProfile}>Uzuza / Hindura umwirondoro</button></article><article><h2>Kwemeza konti</h2><p>Kohereza registration number cyangwa icyemezo kimwe cy'akazi bituma Admin abasha kugenzura konti.</p></article></section></main>}
+function AdminDashboard(){const[items,setItems]=useState([]),[busy,setBusy]=useState(false),[error,setError]=useState("");useEffect(()=>{load()},[]);async function load(){setBusy(true);const{data,error}=await supabase.from("teacher_verifications").select("id,teacher_id,registration_number,document_path,status,admin_note,created_at,profiles!teacher_id(full_name,email,phone,district,school_name,subject,teaching_level)").order("created_at",{ascending:false});if(error)setError(error.message);else setItems(data||[]);setBusy(false)}async function review(item,status){const note=status==="rejected"?(window.prompt("Andika impamvu yo kwanga cyangwa ibyo agomba gukosora:")||""):"Konti yagenzuwe kandi yemejwe.";const{error}=await supabase.rpc("review_teacher_verification",{p_teacher_id:item.teacher_id,p_status:status,p_note:note});if(error)setError(error.message);else load()}async function openDocument(path){if(!path)return;const{data,error}=await supabase.storage.from("verification-documents").createSignedUrl(path,120);if(error)setError(error.message);else window.open(data.signedUrl,"_blank")}
+ return <main className="dashboard"><section className="welcome"><div><small>Admin Dashboard</small><h1>Kwemeza abarimu</h1><p>{items.filter(x=>x.status==="pending").length} bategereje kugenzurwa</p></div><button className="outline" onClick={load}>Vugurura</button></section>{error&&<div className="inlineError">{error}</div>}<section className="adminList">{busy?<p>Birimo gufunguka...</p>:items.length?items.map(item=><article key={item.id}><div className="adminHead"><div><h3>{item.profiles?.full_name||"Nta zina"}</h3><p>{item.profiles?.email}</p></div><span className={`badge ${item.status==="verified"?"verified":"pending"}`}>{item.status}</span></div><div className="infoGrid"><p><b>Telefone:</b> {item.profiles?.phone||"-"}</p><p><b>Akarere:</b> {item.profiles?.district||"-"}</p><p><b>Ikigo:</b> {item.profiles?.school_name||"-"}</p><p><b>Isomo:</b> {item.profiles?.subject||"-"}</p><p><b>Urwego:</b> {item.profiles?.teaching_level||"-"}</p><p><b>Registration No:</b> {item.registration_number||"-"}</p></div><div className="reviewButtons">{item.document_path&&<button className="outline" onClick={()=>openDocument(item.document_path)}>Reba icyemezo</button>}<button className="approve" onClick={()=>review(item,"verified")}>✓ Emeza</button><button className="reject" onClick={()=>review(item,"rejected")}>✕ Anga</button></div></article>):<p>Nta cyifuzo cyo kwemezwa kirahari.</p>}</section></main>}
+function AuthModal({mode,setMode,auth,setAuth,submit,close,loading}){const c=e=>setAuth({...auth,[e.target.name]:e.target.value});return <div className="overlay"><form className="modal" onSubmit={submit}><button type="button" className="close" onClick={close}>✕</button><h2>{mode==="register"?"Fungura konti":"Injira muri konti"}</h2>{mode==="register"&&<><label>Amazina yose<input name="full_name" value={auth.full_name} onChange={c} required/></label><label>Ubwoko bwa konti<select name="role" value={auth.role} onChange={c}>{Object.entries(roleLabels).filter(([v])=>v!=="admin").map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></label></>}<label>Email<input name="email" type="email" value={auth.email} onChange={c} required/></label><label>Ijambo ry'ibanga<input name="password" type="password" minLength="8" value={auth.password} onChange={c} required/></label><button className="primary full" disabled={loading}>{loading?"Tegereza...":mode==="register"?"Kora konti":"Injira"}</button><p className="switch"><button type="button" className="link" onClick={()=>setMode(mode==="register"?"login":"register")}>{mode==="register"?"Usanzwe ufite konti? Injira":"Nta konti ufite? Fungura konti"}</button></p></form></div>}
+function ProfileModal({form,setForm,registrationNumber,setRegistrationNumber,setDocumentFile,save,close,loading}){const c=e=>setForm({...form,[e.target.name]:e.target.value});return <div className="overlay"><form className="modal wide" onSubmit={save}><button type="button" className="close" onClick={close}>✕</button><h2>Uzuza umwirondoro</h2><div className="formGrid"><label>Telefone<input name="phone" value={form.phone} onChange={c} required/></label><label>Akarere<select name="district" value={form.district} onChange={c} required><option value="">Hitamo</option>{districts.map(x=><option key={x}>{x}</option>)}</select></label><label>Umurenge<input name="sector" value={form.sector} onChange={c} required/></label><label>Ikigo<input name="school_name" value={form.school_name} onChange={c} required/></label><label>Isomo<select name="subject" value={form.subject} onChange={c} required><option value="">Hitamo</option>{subjects.map(x=><option key={x}>{x}</option>)}</select></label><label>Urwego<select name="teaching_level" value={form.teaching_level} onChange={c} required><option value="">Hitamo</option>{["Nursery","Primary","Secondary","TVET"].map(x=><option key={x}>{x}</option>)}</select></label><label>Teacher registration number<input value={registrationNumber} onChange={e=>setRegistrationNumber(e.target.value)}/></label><label>Icyemezo<input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={e=>setDocumentFile(e.target.files?.[0]||null)}/></label></div><button className="primary full" disabled={loading}>{loading?"Birimo kubikwa...":"Bika kandi wohereze"}</button></form></div>}
