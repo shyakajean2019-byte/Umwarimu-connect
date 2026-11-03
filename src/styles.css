@@ -14,3 +14,5 @@
 .notification{padding:10px;border-radius:9px;margin:8px 0;cursor:pointer}.notification.unread{background:#e5f3ff;border-left:4px solid #0877ce}.notification.read{background:#f3f5f6;color:#6d7f8d}.notification p{margin:5px 0;font-size:13px}
 
 .schoolActions{display:flex;gap:9px;flex-wrap:wrap}.schoolSummary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;background:white;border:1px solid #dce7ef;border-radius:14px;padding:18px;margin:20px 0}@media(max-width:700px){.schoolActions{flex-direction:column}.schoolSummary{grid-template-columns:1fr}}
+
+.resetLink{display:block;width:100%;text-align:center;color:#b0473e}.modal>label{display:block;margin:14px 0;font-weight:700}.modal>label input{display:block;width:100%;margin-top:7px;padding:12px;border:1px solid #cad8e4;border-radius:9px}
