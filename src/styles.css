@@ -8,3 +8,5 @@
 .wideField{grid-column:1/-1}.list button:disabled{opacity:.55}@media(max-width:700px){.wideField{grid-column:auto}}
 
 .applicationCard{border-left:4px solid #0877ce!important}.applicationActions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.interview{border:0;background:#7655c5;color:#fff;border-radius:9px;padding:11px 16px;font-weight:800}.coverLetter{background:#f4f8fb;padding:12px;border-radius:10px;margin-top:10px}.coverLetter p{margin:6px 0}.toolbar select{padding:10px;border:1px solid #cad8e4;border-radius:9px;background:white}@media(max-width:700px){.applicationActions{flex-direction:column}.toolbar select{width:100%}}
+
+.interviewBox{margin-top:12px;background:#f0ebff;border-left:4px solid #7655c5;padding:12px;border-radius:9px}.interviewBox p{margin:6px 0}
