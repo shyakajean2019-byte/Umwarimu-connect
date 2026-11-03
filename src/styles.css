@@ -12,3 +12,5 @@
 .interviewBox{margin-top:12px;background:#f0ebff;border-left:4px solid #7655c5;padding:12px;border-radius:9px}.interviewBox p{margin:6px 0}
 
 .notification{padding:10px;border-radius:9px;margin:8px 0;cursor:pointer}.notification.unread{background:#e5f3ff;border-left:4px solid #0877ce}.notification.read{background:#f3f5f6;color:#6d7f8d}.notification p{margin:5px 0;font-size:13px}
+
+.schoolActions{display:flex;gap:9px;flex-wrap:wrap}.schoolSummary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;background:white;border:1px solid #dce7ef;border-radius:14px;padding:18px;margin:20px 0}@media(max-width:700px){.schoolActions{flex-direction:column}.schoolSummary{grid-template-columns:1fr}}
