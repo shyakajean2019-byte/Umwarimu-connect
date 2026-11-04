@@ -90,7 +90,7 @@ function Dashboard({profile,requests,matches,userId,openRequest,setStatus,accept
   <section className="requestRule"><b>Ibyifuzo ntibifungwa n'uwabitanze.</b><span>Buri karere kemera icyifuzo kimwe. Icyifuzo kirangira ari uko abahujwe bombi bemeje ko baguranye.</span></section><section className="toolbar"><h2>Permutation yanjye</h2><button className="primary" disabled={profile?.verification_status!=="verified"} onClick={openRequest}>+ Tanga icyifuzo mu kandi karere</button></section>
   {profile?.verification_status!=="verified"&&<div className="warning">Konti igomba kubanza kwemezwa kugira ngo utange icyifuzo.</div>}
   <section className="list">{requests.length?requests.map(r=><article key={r.id}><div className="route"><div><small>Arava</small><b>{r.current_district}</b><span>{r.current_sector||"Umurenge nturatangwa"} · {r.current_school}</span></div><strong>→</strong><div><small>Ashaka kujya</small><b>{r.wanted_district}</b><span>{(r.wanted_sectors?.length?r.wanted_sectors:[r.wanted_sector]).filter(Boolean).join(", ")||"Imirenge ntiratangwa"} · {r.subject} · {r.teaching_level}</span></div></div><div className="row"><span className="badge pending">{r.status}</span><span className="lockedRequest">Icyifuzo kiguma ku rubuga kugeza permutation yemejwe n'impande zombi.</span></div></article>):<div className="empty">Nta cyifuzo cya permutation uratanga.</div>}</section>
-  <h2>Matches zabonetse</h2>
+  <TeacherDocuments profile={profile}/><h2>Matches zabonetse</h2>
   <section className="list">{matches.length?matches.map(m=>{
    const mine=m.teacher_a===userId?m.teacher_a_accepted:m.teacher_b_accepted;
    const otherAccepted=m.teacher_a===userId?m.teacher_b_accepted:m.teacher_a_accepted;
@@ -134,7 +134,7 @@ function Admin(){
   <section className="list">{schools.length?schools.map(s=><article key={s.id}><div className="row"><div><h3>{s.name}</h3><p>{s.email} · {s.phone||"Nta telefone"}</p></div><span className={`badge ${s.verification_status==="verified"?"verified":"pending"}`}>{s.verification_status||"pending"}</span></div><div className="adminGrid"><p><b>Akarere:</b> {s.district}</p><p><b>Umurenge:</b> {s.sector||"-"}</p><p><b>Registration:</b> {s.registration_number||"-"}</p><p><b>Uhagarariye:</b> {s.representative_name||"-"}</p></div><div className="applicationActions">{s.document_path&&<button className="outline" onClick={()=>openSchoolDocument(s.document_path)}>Reba icyemezo</button>}<button className="approve" onClick={()=>reviewSchool(s.id,"verified")}>✓ Emeza ikigo</button><button className="reject" onClick={()=>reviewSchool(s.id,"rejected")}>✕ Anga ikigo</button></div></article>):<div className="empty">Nta kigo kirategereza kwemezwa.</div>}</section>
   <h2>Ibyifuzo bya permutation</h2>
   <section className="list">{permutations.length?permutations.map(r=><article key={r.id}><div className="row"><div><h3>{r.profiles?.full_name||"Umwarimu"}</h3><p>{r.profiles?.email} · {r.profiles?.phone||"Nta telefone"}</p></div><span className="badge pending">{r.status}</span></div><div className="route"><div><small>Arava</small><b>{r.current_district}</b><span>{r.current_sector||"Umurenge nturatangwa"} · {r.current_school}</span></div><strong>→</strong><div><small>Ashaka kujya</small><b>{r.wanted_district}</b><span>{(r.wanted_sectors?.length?r.wanted_sectors:[r.wanted_sector]).filter(Boolean).join(", ")||"Imirenge ntiratangwa"} · {r.subject} · {r.teaching_level}</span></div></div>{r.details&&<p><b>Ibisobanuro:</b> {r.details}</p>}</article>):<div className="empty">Nta cyifuzo cya permutation kiratangwa.</div>}</section>
-  <AdminModeration/>
+  <AdminDocumentLibrary/><AdminModeration/>
  </main>
 }
 function LegalModal({page,close}){
@@ -148,6 +148,61 @@ function LegalModal({page,close}){
 }
 function SuspendedAccount({profile}){return <main className="dashboard"><div className="suspendedCard"><h1>Konti yahagaritswe</h1><p>{profile?.suspension_reason||"Konti yahagaritswe na Admin mu gihe hakorwa igenzura."}</p><p>Niba ubona ari amakosa, koresha Tanga report cyangwa uvugane na Admin.</p></div></main>}
 function ReportModal({value,setValue,submit,close}){const c=e=>setValue({...value,[e.target.name]:e.target.value});return <div className="overlay"><form className="modal" onSubmit={submit}><button type="button" className="close" onClick={close}>✕</button><h2>Tanga report</h2><label>Ubwoko<select name="target_type" value={value.target_type} onChange={c}><option value="account">Konti</option><option value="permutation">Permutation</option><option value="vacancy">Vacancy</option><option value="message">Ubutumwa</option><option value="school">Ikigo</option></select></label><label>ID y'icyo utangaho report, niba uyizi<input name="target_id" value={value.target_id} onChange={c} placeholder="UUID cyangwa usige blank"/></label><label>Impamvu<textarea name="reason" value={value.reason} onChange={c} minLength="10" required/></label><button className="primary full">Ohereza report</button></form></div>}
+function TeacherDocuments({profile}){
+ const[documents,setDocuments]=useState([]),[requests,setRequests]=useState([]),[search,setSearch]=useState(""),[type,setType]=useState("all"),[error,setError]=useState("");
+ useEffect(()=>{load()},[]);
+ async function load(){
+  setError("");
+  const[{data:d,error:de},{data:r,error:re}]=await Promise.all([
+   supabase.from("resource_documents").select("*").eq("status","published").order("created_at",{ascending:false}),
+   supabase.from("document_requests").select("*").eq("teacher_id",profile.id).order("requested_at",{ascending:false})
+  ]);
+  if(de||re)setError(de?.message||re?.message||"");
+  setDocuments(d||[]);setRequests(r||[]);
+ }
+ async function requestDocument(id){
+  const{error}=await supabase.rpc("request_work_document",{p_document_id:id});
+  if(error)setError(error.message);else{window.alert("Icyifuzo cyoherejwe kuri Admin.");load()}
+ }
+ async function downloadDocument(doc){
+  const{data,error}=await supabase.storage.from("work-documents").createSignedUrl(doc.file_path,120);
+  if(error)setError(error.message);else window.open(data.signedUrl,"_blank");
+ }
+ const filtered=documents.filter(d=>(type==="all"||d.document_type===type)&&(`${d.title} ${d.subject||""} ${d.class_level||""}`.toLowerCase().includes(search.toLowerCase())));
+ const requestFor=id=>requests.find(r=>r.document_id===id);
+ return <section className="documentsArea"><div className="toolbar"><div><h2>Teacher Documents</h2><p>Lesson Plans, Schemes of Work n'izindi documents zemejwe na Admin.</p></div><button className="outline" onClick={load}>Vugurura</button></div>{error&&<div className="warning">{error}</div>}<div className="documentFilters"><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Shakisha title, isomo cyangwa class..."/><select value={type} onChange={e=>setType(e.target.value)}><option value="all">Documents zose</option><option value="lesson_plan">Lesson Plans</option><option value="scheme_of_work">Schemes of Work</option><option value="other">Izindi</option></select></div><section className="documentGrid">{filtered.length?filtered.map(d=>{const r=requestFor(d.id);return <article key={d.id} className="documentCard"><span className="docType">{d.document_type.replaceAll("_"," ")}</span><h3>{d.title}</h3><p>{d.subject||"-"} · {d.class_level||"-"}</p><p>{d.description||"Nta bisobanuro by'inyongera."}</p>{!r?<button className="primary" onClick={()=>requestDocument(d.id)}>Saba iyi document</button>:r.status==="approved"?<button className="approve" onClick={()=>downloadDocument(d)}>Download</button>:r.status==="rejected"?<div><span className="badge suspended">rejected</span><p>{r.admin_note||"Admin ntiyemeye iki cyifuzo."}</p><button className="outline" onClick={()=>requestDocument(d.id)}>Ongera usabe</button></div>:<span className="badge pending">Itegereje Admin</span>}</article>}):<div className="empty">Nta document ihuye n'ibyo washakishije.</div>}</section></section>
+}
+function AdminDocumentLibrary(){
+ const[documents,setDocuments]=useState([]),[requests,setRequests]=useState([]),[open,setOpen]=useState(false),[file,setFile]=useState(null),[error,setError]=useState(""),[form,setForm]=useState({title:"",document_type:"lesson_plan",subject:"",class_level:"",description:""});
+ useEffect(()=>{load()},[]);
+ async function load(){
+  setError("");
+  const[{data:d,error:de},{data:r,error:re}]=await Promise.all([
+   supabase.from("resource_documents").select("*").order("created_at",{ascending:false}),
+   supabase.from("document_requests").select("*,profiles!teacher_id(full_name,email,phone),resource_documents!document_id(title,document_type,subject,class_level)").order("requested_at",{ascending:false})
+  ]);
+  if(de||re)setError(de?.message||re?.message||"");
+  setDocuments(d||[]);setRequests(r||[]);
+ }
+ async function upload(e){
+  e.preventDefault();if(!file)return;
+  setError("");
+  const ext=file.name.split(".").pop().toLowerCase();
+  const path=`${form.document_type}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g,"-")}`;
+  const{error:u}=await supabase.storage.from("work-documents").upload(path,file);
+  if(u){setError(u.message);return}
+  const{error}=await supabase.from("resource_documents").insert({...form,file_path:path,status:"published",uploaded_by:(await supabase.auth.getUser()).data.user.id});
+  if(error)setError(error.message);else{setOpen(false);setFile(null);setForm({title:"",document_type:"lesson_plan",subject:"",class_level:"",description:""});load()}
+ }
+ async function review(id,status){
+  const note=status==="rejected"?(window.prompt("Andika impamvu yo kwanga:")||""):"Download yemerewe.";
+  const{error}=await supabase.rpc("review_work_document_request",{p_request_id:id,p_status:status,p_admin_note:note});
+  if(error)setError(error.message);else load();
+ }
+ async function archive(id){const{error}=await supabase.from("resource_documents").update({status:"archived",updated_at:new Date().toISOString()}).eq("id",id);if(error)setError(error.message);else load()}
+ const c=e=>setForm({...form,[e.target.name]:e.target.value});
+ return <section className="moderation documentAdmin"><div className="toolbar"><div><h2>Teacher Documents Admin</h2><p>{requests.filter(r=>r.status==="pending").length} requests zitegereje.</p></div><button className="primary" onClick={()=>setOpen(true)}>+ Shyiraho document</button></div>{error&&<div className="warning">{error}</div>}<h3>Requests z'abarezi</h3><section className="list">{requests.length?requests.map(r=><article key={r.id} className="documentRequest"><div className="row"><div><h3>{r.profiles?.full_name||"Umwarimu"}</h3><p>{r.profiles?.email} · {r.teacher_phone||r.profiles?.phone||"Nta telefone"}</p></div><span className={`badge ${r.status==="approved"?"verified":r.status==="rejected"?"suspended":"pending"}`}>{r.status}</span></div><div className="adminGrid"><p><b>Document:</b> {r.resource_documents?.title}</p><p><b>Ubwoko:</b> {r.resource_documents?.document_type}</p><p><b>Isomo:</b> {r.resource_documents?.subject||"-"}</p><p><b>Class:</b> {r.resource_documents?.class_level||"-"}</p></div>{r.status==="pending"&&<div className="adminButtons"><button className="approve" onClick={()=>review(r.id,"approved")}>Emerera Download</button><button className="reject" onClick={()=>review(r.id,"rejected")}>Anga</button></div>}</article>):<div className="empty">Nta document request irahari.</div>}</section><h3>Documents zashyizweho</h3><section className="documentGrid">{documents.map(d=><article key={d.id} className="documentCard"><span className="docType">{d.document_type.replaceAll("_"," ")}</span><h3>{d.title}</h3><p>{d.subject||"-"} · {d.class_level||"-"}</p><span className="badge pending">{d.status}</span>{d.status==="published"&&<button className="reject" onClick={()=>archive(d.id)}>Archive</button>}</article>)}</section>{open&&<div className="overlay"><form className="modal wide" onSubmit={upload}><button type="button" className="close" onClick={()=>setOpen(false)}>✕</button><h2>Shyiraho Teacher Document</h2><div className="formGrid"><label>Title<input name="title" value={form.title} onChange={c} required/></label><label>Ubwoko<select name="document_type" value={form.document_type} onChange={c}><option value="lesson_plan">Lesson Plan</option><option value="scheme_of_work">Scheme of Work</option><option value="other">Other</option></select></label><label>Isomo<input name="subject" value={form.subject} onChange={c} required/></label><label>Class/Urwego<input name="class_level" value={form.class_level} onChange={c} required/></label><label className="wideField">Ibisobanuro<textarea name="description" value={form.description} onChange={c}/></label><label className="wideField">File<input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx" onChange={e=>setFile(e.target.files?.[0]||null)} required/></label></div><button className="primary full">Upload na Publish</button></form></div>}</section>
+}
 function AdminModeration(){
  const[reports,setReports]=useState([]),[users,setUsers]=useState([]),[vacancies,setVacancies]=useState([]),[stats,setStats]=useState({}),[error,setError]=useState("");
  useEffect(()=>{load()},[]);
@@ -212,7 +267,7 @@ function JobSeeker({profile,jobs,applications,applyJob}){
   {error&&<div className="warning">{error}</div>}
   <section className="metrics"><article><b>{jobs.length}</b><span>Vacancies</span></article><article><b>{applications.length}</b><span>Applications</span></article><article><b>{notifications.filter(x=>!x.read_at).length}</b><span>Notifications nshya</span></article></section>
   <section className="dashboardGrid"><article><h2>Job Profile</h2><p><b>Impamyabumenyi:</b> {jobProfile?.qualification||"Ntuzuye"}</p><p><b>Uburambe:</b> {jobProfile?.years_experience??0} years</p><p><b>Uturere:</b> {(jobProfile?.preferred_districts||[]).join(", ")||"Ntuzuye"}</p><p><b>CV:</b> {jobProfile?.cv_path?"Yashyizweho":"Ntirashyirwaho"}</p></article><article><h2>Notifications</h2>{notifications.length?notifications.slice(0,5).map(n=><div className={`notification ${n.read_at?"read":"unread"}`} key={n.id} onClick={()=>markRead(n.id)}><b>{n.title}</b><p>{n.body}</p></div>):<p>Nta notification irahari.</p>}</article></section>
-  <h2>Imyanya y'akazi ihari</h2><section className="list">{jobs.length?jobs.map(j=><article key={j.id}><div className="row"><div><h3>{j.title}</h3><p>{j.schools?.name||"Ikigo"} · {j.district}</p></div><span className="badge verified">{j.status}</span></div><div className="adminGrid"><p><b>Isomo:</b> {j.subject}</p><p><b>Urwego:</b> {j.teaching_level}</p><p><b>Uburambe:</b> {j.minimum_experience} years</p><p><b>Deadline:</b> {j.deadline}</p></div><p>{j.description}</p><button className="primary" disabled={!jobProfile?.cv_path||applications.some(a=>a.vacancy_id===j.id)} onClick={()=>applyJob(j)}>{!jobProfile?.cv_path?"Banza ushyireho CV":applications.some(a=>a.vacancy_id===j.id)?"Warasabye":"Saba akazi"}</button></article>):<div className="empty">Nta vacancy iratangazwa.</div>}</section>
+  <TeacherDocuments profile={profile}/><h2>Imyanya y'akazi ihari</h2><section className="list">{jobs.length?jobs.map(j=><article key={j.id}><div className="row"><div><h3>{j.title}</h3><p>{j.schools?.name||"Ikigo"} · {j.district}</p></div><span className="badge verified">{j.status}</span></div><div className="adminGrid"><p><b>Isomo:</b> {j.subject}</p><p><b>Urwego:</b> {j.teaching_level}</p><p><b>Uburambe:</b> {j.minimum_experience} years</p><p><b>Deadline:</b> {j.deadline}</p></div><p>{j.description}</p><button className="primary" disabled={!jobProfile?.cv_path||applications.some(a=>a.vacancy_id===j.id)} onClick={()=>applyJob(j)}>{!jobProfile?.cv_path?"Banza ushyireho CV":applications.some(a=>a.vacancy_id===j.id)?"Warasabye":"Saba akazi"}</button></article>):<div className="empty">Nta vacancy iratangazwa.</div>}</section>
   <h2>Applications zanjye</h2><section className="list">{applications.length?applications.map(a=><article key={a.id}><h3>{a.job_vacancies?.title}</h3><p>{a.job_vacancies?.subject} · {a.job_vacancies?.district}</p><span className="badge pending">{a.status}</span>{a.status==="interview"&&<div className="interviewBox"><p><b>Itariki n'isaha:</b> {a.interview_at?new Date(a.interview_at).toLocaleString():"Ntibirashyirwaho"}</p><p><b>Aho interview izabera:</b> {a.interview_location||"Ntiharatangazwa"}</p>{a.interview_note&&<p><b>Amabwiriza:</b> {a.interview_note}</p>}</div>}</article>):<div className="empty">Nta kazi urasaba.</div>}</section>
   {open&&<div className="overlay"><form className="modal wide" onSubmit={saveProfile}><button type="button" className="close" onClick={()=>setOpen(false)}>✕</button><h2>Job Profile na CV</h2><div className="formGrid"><label>Impamyabumenyi<input name="qualification" value={form.qualification} onChange={c} required/></label><label>Imyaka y'uburambe<input name="years_experience" type="number" min="0" value={form.years_experience} onChange={c} required/></label><label>Uturere ushaka gukoreramo<input name="preferred_districts" value={form.preferred_districts} onChange={c} placeholder="Gasabo, Kicukiro, Huye" required/></label><label>Ubwoko bw'akazi<select name="employment_type" value={form.employment_type} onChange={c}><option>Full-time</option><option>Part-time</option><option>Contract</option></select></label><label>Igihe watangirira<input name="available_from" type="date" value={form.available_from} onChange={c}/></label><label>CV ya PDF<input type="file" accept="application/pdf,.pdf" onChange={e=>setCvFile(e.target.files?.[0]||null)} required={!jobProfile?.cv_path}/></label></div><button className="primary full" disabled={saving}>{saving?"Birimo kubikwa...":"Bika Job Profile"}</button></form></div>}
  </main>
