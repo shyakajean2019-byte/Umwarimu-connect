@@ -22,3 +22,5 @@
 footer p{margin:0 0 10px}.footerLinks{display:flex;justify-content:center;gap:14px;flex-wrap:wrap}.footerLinks button{border:0;background:none;color:#d8e9f5;text-decoration:underline}.legalModal{width:min(850px,100%);max-height:90vh;overflow:auto}.legalContent{line-height:1.55;color:#334f65}.legalContent h3{margin:22px 0 8px;color:#123e67}.legalContent li{margin:7px 0}.legalContent ul{padding-left:23px}
 
 .modal select:disabled{background:#eef2f5;color:#788b99;cursor:not-allowed}
+
+.locationHint{font-size:12px;color:#72869a}.modal select:disabled{background:#eef2f5;color:#788b99;cursor:not-allowed}
