@@ -52,3 +52,5 @@ footer p{margin:0 0 10px}.footerLinks{display:flex;justify-content:center;gap:14
 .missingDownloadButton{min-width:150px}.missingRequestsAdmin article{border-left:4px solid #d69a13!important}.missingHelpActions button{border:0}@media(max-width:560px){.missingDownloadButton{width:100%}}
 
 .paidPreviewModal .paymentNotice{margin-top:18px}.paidPreviewModal .previewHeader{padding-bottom:8px;border-bottom:1px solid #dce7ef}
+
+.initialDocumentActions{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto}.initialDocumentActions button,.initialDocumentActions a{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;border-radius:9px;padding:11px 14px;font-weight:800}.initialDocumentActions button{flex:1 1 100%}.initialDocumentActions a:nth-of-type(1){background:#0877ce;color:#fff}.initialDocumentActions a:nth-of-type(2){background:#25D366;color:#073b1b}.paymentActions{display:flex!important}.missingHelpActions{display:flex!important}@media(max-width:560px){.initialDocumentActions{flex-direction:column}.initialDocumentActions a{width:100%}}
