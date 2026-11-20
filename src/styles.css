@@ -108,3 +108,20 @@ footer p{margin:0 0 10px}.footerLinks{display:flex;justify-content:center;gap:14
 .lessonPermutationBtn:hover{background:#0667b2}
 .lessonPermutationBtn:disabled{opacity:.6;cursor:wait}
 @media(max-width:600px){.lessonQuickNav{top:8px;gap:8px;padding:8px}.lessonQuickNav button{flex:1;padding:10px 8px;font-size:12px}.lessonPermutationBtn{flex:1.5!important}}
+
+
+/* Clear matched teacher profile */
+.matchProfileCard{overflow:hidden;padding:0!important;border:1px solid #b9d7ea!important;box-shadow:0 10px 28px rgba(13,70,105,.10)}
+.matchFoundBanner{display:flex;align-items:center;gap:11px;padding:13px 18px;background:#e7f7ef;color:#096947;border-bottom:1px solid #bfe8d2}
+.matchFoundBanner>span{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#13865e;color:#fff;font-weight:900}
+.matchFoundBanner div{display:flex;flex-direction:column;gap:2px}.matchFoundBanner b{font-size:15px}.matchFoundBanner small{color:#377561}
+.matchProfileHeader{padding:18px 20px 13px;margin:0!important}
+.matchIdentity{display:flex;align-items:center;gap:12px}.matchIdentity small,.matchProfileGrid small{display:block;color:#667f91;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
+.matchAvatar{display:grid;place-items:center;flex:0 0 48px;width:48px;height:48px;border-radius:50%;background:#0877ce;color:#fff;font-size:22px;font-weight:900}
+.matchIdentity h3{margin:0;font-size:20px;color:#103e60}
+.matchProfileGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:0 20px 15px}
+.matchProfileGrid>div{min-width:0;background:#f5f9fc;border:1px solid #dce8ef;border-radius:10px;padding:12px}
+.matchProfileGrid strong{display:block;color:#123d5c;overflow-wrap:anywhere}.matchSubjects{grid-column:auto}
+.matchAcceptance{display:flex;gap:10px;flex-wrap:wrap;padding:0 20px 15px}.matchAcceptance span{background:#fff7df;border:1px solid #f0dda5;border-radius:20px;padding:7px 11px;font-size:12px;color:#655018}
+.matchProfileCard>.approve,.matchProfileCard>.contactBox{margin:0 20px 20px}
+@media(max-width:650px){.matchProfileHeader{align-items:flex-start;gap:12px}.matchProfileGrid{grid-template-columns:1fr}.matchIdentity h3{font-size:17px}.matchFoundBanner,.matchProfileHeader,.matchProfileGrid{padding-left:14px;padding-right:14px}.matchAcceptance{padding-left:14px;padding-right:14px}.matchProfileCard>.approve,.matchProfileCard>.contactBox{margin-left:14px;margin-right:14px}}
